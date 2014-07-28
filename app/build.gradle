@@ -5,9 +5,9 @@ android {
   buildToolsVersion '20.0.0'
 
   defaultConfig {
-    applicationId "bledemo"
-    minSdkVersion '19'
-    targetSdkVersion '19'
+    applicationId "com.bledemo"
+    minSdkVersion 19
+    targetSdkVersion 19
     versionCode 1
     versionName "1.0"
   }

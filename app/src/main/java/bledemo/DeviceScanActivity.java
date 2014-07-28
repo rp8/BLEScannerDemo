@@ -25,6 +25,8 @@ import android.widget.Toast;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * Activity for scanning and displaying available Bluetooth LE devices.
@@ -49,12 +51,15 @@ public class DeviceScanActivity extends ListActivity {
           Log.d(TAG, String.format("UUID = %s", uuid.toString()));
         }
       }
+
       printScanRecord(scanRecord);
+
+      final ScanResult result = new ScanResult(rssi, scanRecord);
 
       runOnUiThread(new Runnable() {
         @Override
         public void run() {
-          mLeDeviceListAdapter.addDevice(device);
+          mLeDeviceListAdapter.addDevice(device, result);
           mLeDeviceListAdapter.notifyDataSetChanged();
         }
       });
@@ -65,28 +70,32 @@ public class DeviceScanActivity extends ListActivity {
   private boolean mScanning;
   private Handler mHandler;
 
-  public static String ByteArrayToString(byte[] ba) {
+  private static String ByteArrayToString(byte[] ba, boolean prefix) {
     StringBuilder hex = new StringBuilder(ba.length * 2);
-    for (byte b : ba)
-      hex.append(String.format("0x%02X ", b));
+    for (byte b : ba) {
+      if (prefix)
+        hex.append(String.format("0x%02X ", b));
+      else
+        hex.append(String.format("%02X", b));
+    }
 
     return hex.toString();
   }
 
-  public void printScanRecord(byte[] scanRecord) {
+  private void printScanRecord(byte[] scanRecord) {
 
     try {
       String decodedRecord = new String(scanRecord, "UTF-8");
-      Log.d(TAG, "Scan Raw Data: " + ByteArrayToString(scanRecord));
+      Log.d(TAG, "Scan Raw Data: " + ByteArrayToString(scanRecord, true));
       parseScanRecord(scanRecord);
     } catch (UnsupportedEncodingException e) {
       e.printStackTrace();
     }
-
   }
 
-  public void parseScanRecord(byte[] scanRecord) {
+  private void parseScanRecord(byte[] scanRecord) {
     int index = 0;
+
     while (index < scanRecord.length) {
       int length = scanRecord[index++];
       if (length == 0) break;
@@ -95,9 +104,20 @@ public class DeviceScanActivity extends ListActivity {
       if (type == 0) break;
 
       byte[] data = Arrays.copyOfRange(scanRecord, index + 1, index + length);
-      Log.d(TAG, "Parsed Data: Length = " + length + ", Type = " + String.format("%02X", type) + ", Data = " + ByteArrayToString(data));
-
+      String d = ByteArrayToString(data, true);
+      Log.d(TAG, "Parsed Data: Length = " + length + ", Type = " + String.format("%02X", type) + ", Data = " + d);
       index += length;
+    }
+  }
+
+  private class ScanResult {
+    public int RSSI;
+    public byte[] ScanRecord;
+
+    public ScanResult(int rssi, byte[] scanRecord)
+    {
+      this.RSSI = rssi;
+      this.ScanRecord = scanRecord;
     }
   }
 
@@ -242,22 +262,27 @@ public class DeviceScanActivity extends ListActivity {
   static class ViewHolder {
     TextView deviceName;
     TextView deviceAddress;
+    TextView deviceRSSI;
+    TextView deviceData;
   }
 
   // Adapter for holding devices found through scanning.
   private class LeDeviceListAdapter extends BaseAdapter {
+    private ArrayList<ScanResult> mLeScans;
     private ArrayList<BluetoothDevice> mLeDevices;
     private LayoutInflater mInflator;
 
     public LeDeviceListAdapter() {
       super();
       mLeDevices = new ArrayList<BluetoothDevice>();
+      mLeScans = new ArrayList<ScanResult>();
       mInflator = DeviceScanActivity.this.getLayoutInflater();
     }
 
-    public void addDevice(BluetoothDevice device) {
+    public void addDevice(BluetoothDevice device, ScanResult result) {
       if (!mLeDevices.contains(device)) {
         mLeDevices.add(device);
+        mLeScans.add(result);
       }
     }
 
@@ -295,6 +320,10 @@ public class DeviceScanActivity extends ListActivity {
             .findViewById(R.id.device_address);
         viewHolder.deviceName = (TextView) view
             .findViewById(R.id.device_name);
+        viewHolder.deviceRSSI = (TextView) view
+            .findViewById(R.id.device_rssi);
+        viewHolder.deviceData = (TextView) view
+            .findViewById(R.id.device_data);
         view.setTag(viewHolder);
       } else {
         viewHolder = (ViewHolder) view.getTag();
@@ -306,7 +335,12 @@ public class DeviceScanActivity extends ListActivity {
         viewHolder.deviceName.setText(deviceName);
       else
         viewHolder.deviceName.setText(R.string.unknown_device);
+
       viewHolder.deviceAddress.setText(device.getAddress());
+
+      ScanResult result = mLeScans.get(i);
+      viewHolder.deviceRSSI.setText(Integer.toString(result.RSSI));
+      viewHolder.deviceData.setText(ByteArrayToString(result.ScanRecord, false));
 
       return view;
     }

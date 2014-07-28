@@ -166,7 +166,7 @@ public class DeviceControlActivity extends Activity {
 
   private void clearUI() {
     mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
-    mDataField.setText(R.string.no_data);
+    //mDataField.setText(R.string.no_data);
   }
 
   @Override
@@ -183,7 +183,7 @@ public class DeviceControlActivity extends Activity {
     mGattServicesList = (ExpandableListView) findViewById(R.id.gatt_services_list);
     mGattServicesList.setOnChildClickListener(servicesListClickListner);
     mConnectionState = (TextView) findViewById(R.id.connection_state);
-    mDataField = (TextView) findViewById(R.id.data_value);
+    mDataField = (TextView) findViewById(R.id.device_data);
 
     getActionBar().setTitle(mDeviceName);
     getActionBar().setDisplayHomeAsUpEnabled(true);
